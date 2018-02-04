@@ -1,0 +1,356 @@
+---
+title: "A Game-Theoretic Understanding of Boosting"
+month: "December"
+year: "2017"
+
+author:
+  - name: Jenna Losh
+  
+abstract: |
+  Weight update algorithms have been both derived and applied across disciplines. The classic game-theoretical problem of finding a Nash Equilibrium in a zero-sum, two-player game can be approximately solved using a multiplicative weight update algorithm. The concept of boosting can be understood as solving a game whose two players are a set of hypotheses (or weak classifiers) and a set of examples. In boosting by sampling, the example set has an adversarial relationship with the hypothesis, in that it is constructed so as to maximally challenge the hypothesis. Solving a game against a player of unknown hostility (maybe adversarial, maybe not) is of interest as well; the “learning” player may want to be able to take advantage of any game value their opponent may be willing to give up. This problem is approached with the tools of on-line prediction. 
+
+output: rticles::aea_article
+graphics: yes
+---
+
+When Freund and Schapire were developing their popular AdaBoost algorithm [2], they made some direct connections between the structure of their algorithm and the ideas of classic game theory [3]. The original AdaBoost algorithm [2] can be understood as a two-player game played between an “adversarial” example set and a weak learning algorithm. Roughly, the maximin solution of this game will be the mixed strategy for the examples of the data set that most emphasizes the weaknesses of the weak learner components [1]. This project is an exploration of these ideas - why and how it works, what each concept can gain from being associated with/studied in the context of the other, and some interesting potential expansions of this connection. 
+
+\section{Background}
+
+To arrive at this understanding of boosting, we’ll first define the concepts of game theory involved. We’ll be looking at two-player, zero-sum games. 
+Table 1 gives an example of such a game. 
+\begin{table}
+\caption{A Two-Player, Zero-Sum Game}
+
+\begin{tabular}{lll}
+& L & R \\
+U & 1 & 2 \\
+D & 3 & 1%
+\end{tabular}
+\begin{tablenotes}
+This game only has a solution in mixed strategies: $\{P = (\frac{2}{3}, \frac{1}{3}), Q =  (\frac{1}{3}, \frac{2}{3})\}$. 
+\end{tablenotes}
+\end{table}
+The row player’s pure strategies are labeled with U and D, and the column player’s with L and R. The entries in the matrix are called payoffs; in this setup, we’ll have our row player be the minimizing player, so they see the numbers as costs to incur which they will aim to minimize, while our column player will be the maximizing player, seeing the numbers as gains they wish to maximize. At each round of the game, both players choose a strategy and receives the payoff at the intersection of their strategies.This is the concept of a zero-sum game, wherein the minimizing player essentially loses the payoff to the maximizing player, and the sum of their payoffs is zero. 
+The goal of a game like this is to find a stable strategy for each player: a strategy at which neither player will have a better payoff by switching strategies given what their opponent’s strategy is. These strategy combinations are called Nash Equilibria, and are considered solutions to the game. Sometimes strategies that are simple match-ups of pure strategies will offer a solution to a game. More often, however, a player is required to choose their strategy at each round according to a distribution over their pure strategies, resulting in mixed strategies. A solution of this type is called a Mixed Strategy Nash Equilibrium (MSNE). [4]
+In the example given, there is only an MSNE. We call the row player’s mixed strategy “P” and the column player’s “Q.” The solution to the given game is $\{P = (\frac{2}{3}, \frac{1}{3}), Q =  (\frac{1}{3}, \frac{2}{3})\}$. 
+
+\section{The Game Theory-Boosting Connection}
+
+If we have a game in which the cost matrix is not known ahead of time, can we still find a solution? Freund and Schapire developed the Hedge algorithm, which combines the power of two widely used algorithmic frameworks: on-line learning and the multiplicative weight update method [1]. This algorithm will allow you to play a game expecting payoff almost as good as if you were playing with the optimal mixed strategy [3]. 
+Hedge plays the game on behalf of the row player, and it’s the column player who supplies pieces of the cost matrix throughout the run of Hedge. 
+The basic process of the algorithm is [2]: 
+
+1. Initialize with a proposed distribution over the row player’s strategies.
+
+2. Have the column player produce a loss vector representing the payoffs associated with the strategy that maximizes their payoff given that the row player uses P.
+
+3. Update the weights from which the mixed strategy came using a shrinkage hyperparameter Beta.
+
+4. Normalize these weights so they represent a new mixed strategy that places greater emphasis on the strategies that incurred the least loss. 
+
+Translating this process into one that optimizes predictions on data is pretty direct. Coming from the boosting standpoint, we’ll start with a set of weak learners in addition to a binary data set. Say we have N weak learners; we’ll let our row strategies index these hypotheses while the column strategies index the examples in the data set. Then our payoff matrix M is a mistake matrix, where entry $M( i, j)$ is a 1 if hypothesis $i$ mislabels example $j$ and a 0 if $h_i$ correctly labels $x_j$. The mixed strategy solution of this game ends up being the weights by which we sum our hypotheses to create our final learning rule [3]. 
+
+\section{AdaBoost}
+
+The idea behind AdaBoost is almost the opposite of what was described above. Instead of weighting our hypotheses to minimize the classification error on our training set, we want to take advantage of the on-line process and at each iteration, present our weak learner with a weighted data set that emphasizes those examples the weak learner has previously misclassified. To solve this problem in the game-theoretic framework described above, we simply need to swap the row and column players. To do this, we transpose the game matrix M and multiply each entry by -1. Then we add 1 to each entry so we end up with 1’s for correctly classified examples and 0’s for mistakes. In this way, the weights of examples that were correctly classified will be smaller in the weighted distribution fed to the weak learner in the next iteration. [3] 
+
+AdaBoost follows the pseudocode for Hedge on the reworked game matrix M’ almost exactly, with two key changes. A structural difference is that we’re no longer working with a set of predetermined hypotheses, and our hypothesis does not need to have restrictions on its accuracy. We grow our hypothesis set as we run the algorithm. A technical difference is that AdaBoost’s shrinkage parameter Beta is calculated per hypothesis and depends on the error of the given hypothesis. [3]
+
+\section{What Game Theory Brings to the Table}
+
+The most immediate result game theory produces in service of the Hedge boosting algorithm is the certainty that a combination of weak learning hypotheses can be combined to classify a data set to an arbitrary degree of accuracy. If it’s possible, the Hedge Algorithm can do it. This is known based of proofs of the ability to solve any given two player zero-sum game with mixed strategies, and the appropriate weights for the hypotheses is an MSNE of the game we constructed [3]. This follows immediately from existing proofs in game theory rather than from any particular analysis on boosting as a practice. Neat! 
+
+\section{What Boosting Brings to Game Theory}
+
+Structuring a game that dictates the relationship between data and a prediction also provides an additional framework with which to prove the existence of Nash Equilibria. Because we can calculate the error of this algorithm and show constraints by which its accuracy can be arbitrarily close to optimal, we have another proof that games of this form have a solution [3]. 
+
+\section{Implementation}
+
+I wrote up the Hedge algorithm (see appendix for code) from the pseudocode given in [2] and applied it to a rock-paper-scissors game discussed in [2] & [3] (game shown below). This uses the first game setup discussed above: the row player is minimizing and the column player is maximizing. 
+
+
+ \begin{tabular}{llll}
+  & R & P & S \\
+  R & .5 & 1 & 0 \\
+  P & 0 & .5 & 1 \\
+  S & 1 & 0 & .5%
+  \end{tabular}
+  \begin{tablenotes}
+  This game only has a solution in mixed strategies: $$\{P = (\frac{1}{3}, \frac{1}{3}, \frac{1}{3}), Q = (\frac{1}{3}, \frac{1}{3}, \frac{1}{3})\}$$. 
+  \end{tablenotes}
+  
+  
+I took error measures based on the on-line learning concept of regret, where the algorithm's aim is to incur as small a loss as possible as compared to if they had played by the best strategy in hindsight. Regret is the difference between the total loss incurred by the learning algorithm and the total loss the optimal strategy would have incurred playing against the same sequence of column strategies [3, 6]. This result will shrink as the number of rounds of play (iterations of the Hedge algorithm) increase [3], and indeed that's what I found. 
+
+\begin{figure}
+```{r, echo=FALSE}
+G = matrix(c(.5, 0, 1, 1, .5, 0, 0, 1, .5), nrow = 3, ncol = 3)  # create R-P-S game
+rownames(G) <- c('r', 'p', 's')
+colnames(G) <- c('r', 'p', 's')
+
+hedgegame <- function(G, nrounds, w, b) {
+  
+  # -- housekeeping -- #
+  i = dim(G)[1]
+  j = dim(G)[2]
+  if(missing(w)) {w = matrix(1/i, ncol = i)} #initialize weight matrix
+  if(missing(nrounds)) {nrounds = 1000} # initialize number of rounds
+  if(missing(b)) {b = .5} # set beta
+  
+  rowms <- matrix(0, nrow = nrounds, ncol = i) # to keep track of updates to the mixed strategies
+  colstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  rowstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  costp <- matrix(0, nrow = nrounds, ncol = 1)
+  coste <- matrix(0, nrow = nrounds, ncol = 1)
+  ## --     -- ##
+  
+  # function to choose col that maximizes utility for col player
+  oracle <-function(p){ 
+    utility = matrix(0, nrow = j, ncol = 1)
+    for(s in 1:j){
+      utility[s] <- p%*%G[,s] # calc utility (expected payoff) for each col strategy in response to p
+    }
+    i = as.matrix(which(utility==max(utility))) # choose stategy with largest utility
+    index = sample(x = i, size = 1) # randomly sample from thos strategies (in case more than 1 has the max utility)
+    rbind(index, as.matrix(G[,index])) # return vector containing col strategy and associated cost col
+  } 
+  
+  for(t in 1:nrounds){
+    p = w/sum(w)          # normalize weights to create probability dist over row strategies
+    colmove = oracle(p)   # call oracle for best response strategy [Ref. 1]
+    lossvec = as.matrix(colmove[-1]) 
+    rowmove = sample(c(1:3), size = 1, prob = p)
+    l = G[rowmove, colmove[1]]     # loss row player incurs from col player's strategy
+    
+    
+    # expert chooses 1 strat
+    expert = sample(x = c(1:3), size = 1) # expms = (1/3, 1/3, 1/3) 
+    le = G[expert, colmove[1]]
+    ##
+    rowms[t,] = p
+    colstrat[t] = colmove[1]
+    rowstrat[t] = rowmove
+    costp[t] = l
+    coste[t] = le
+    w = w * t(b^lossvec) # update weights according to observed environment loss
+  }
+  
+  list("costp" = costp, "coste" = coste, "algcost" = sum(costp), "expcost" = sum(coste), "regret" = sum(costp)-sum(coste), "colstrat" = colstrat, "rowstrat" = rowstrat, "rowms" = rowms, "nrounds" = nrounds, "b" = b)
+} 
+
+
+regret = matrix(0, nrow = 70, ncol = 1)
+for(n in 1:70){
+  hedgeresults = hedgegame(G, nrounds = 30*n)
+  regret[n] = (hedgeresults$regret)/(30*n)
+}
+
+matplot(x = c(1:70), y = regret, typ = 'l', lty = 1, xlab = "rounds of play", ylab = "normalized regret")
+```
+\caption{Figure 1}
+  \end{figure}
+  
+I also played a slightly different version of the algorithm against a column player who for some unknown reason really preferred to play paper, and used mixed strategy $$Q = (\frac{1}{5}, \frac{3}{5}, \frac{1}{5})$$. I wanted to see if the Hedge algorithm would indeed be able to extract a higher value out of a game against this misguided opponent than a player using the calculated MSNE of rock-paper-scissors. 
+
+Results (Figure 2) show that Hedge does successfully take advantage of game value that the calculated MSNE strategy leaves on the table. I recorded the total loss over 50 trials of 1000 rounds of game play. The Hedge algorithm always incurs a much lower cost when playing against a non-optimizing opponent.
+
+  \begin{figure}
+```{r, echo = FALSE}
+G = matrix(c(.5, 0, 1, 1, .5, 0, 0, 1, .5), nrow = 3, ncol = 3)  # create R-P-S game
+rownames(G) <- c('r', 'p', 's')
+colnames(G) <- c('r', 'p', 's')
+  
+hedgegame <- function(G, nrounds, w, b) {
+  
+  # -- housekeeping -- #
+  i = dim(G)[1]
+  j = dim(G)[2]
+  if(missing(w)) {w = matrix(1/i, ncol = i)} #initialize weight matrix
+  if(missing(nrounds)) {nrounds = 1000} # initialize number of rounds
+  if(missing(b)) {b = .5} # set beta
+  
+  rowms <- matrix(0, nrow = nrounds, ncol = i) # to keep track of updates to the mixed strategies
+  colstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  rowstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  costp <- matrix(0, nrow = nrounds, ncol = 1)
+  coste <- matrix(0, nrow = nrounds, ncol = 1)
+  ## --     -- ##
+  
+  for(t in 1:nrounds){
+    p = w/sum(w)          # normalize weights to create probability dist over row strategies
+    colmove = sample(x = c(1:3), size = 1, prob = c(1/5,3/5,1/5))   # call oracle for best response strategy Ref. 1]
+    lossvec = G[,colmove] 
+    rowmove = sample(c(1:3), size = 1, prob = p)
+    l = G[rowmove, colmove[1]]     # loss row player incurs from col player's strategy
+    
+    
+    # expert chooses 1 strat
+    expert = sample(x = c(1:3), size = 1) # expms = (1/3, 1/3, 1/3) 
+    le = G[expert, colmove[1]]
+    ##
+    rowms[t,] = p
+    colstrat[t] = colmove[1]
+    rowstrat[t] = rowmove
+    costp[t] = l
+    coste[t] = le
+    w = w * t(b^lossvec) # update weights according to observed environment loss
+  }
+  
+  list("costp" = costp, "coste" = coste, "algcost" = sum(costp), "expcost" = sum(coste), "regret" = sum(costp)-sum(coste), "colstrat" = colstrat, "rowstrat" = rowstrat, "rowms" = rowms, "nrounds" = nrounds, "b" = b)
+} 
+  
+algvsexp = matrix(0, nrow = 50, ncol = 2)
+for(n in 1:50){
+  hedgeresults = hedgegame(G)
+  algvsexp[n,] = cbind(hedgeresults$algcost, hedgeresults$expcost)
+}
+matplot(x=c(1:50), y=algvsexp, typ = 'l', lty = 1, xlab = "trials", ylab = "expert cost vs alg cost")
+```
+\caption{Figure 2}
+\begin{figurenotes}
+I recorded the total loss over 50 trials of 1000 rounds of game play for both the MSNE strategy (red line) and the Hedge strategy (black line). 
+\end{figurenotes}
+\end{figure}
+
+\section{Future Work}
+
+This project obviously does not make any contributions to the state-of-the-art in boosting. In fact, even our textbook mentions the game-theoretical approach to boosting and describes it as impractical [5]. 
+The benefit to understanding prediction in this way, in my eyes, is the possibility of transferring results between the subjects of game theory and statistical learning. Hastie et al. explain some of the advances made in boosting, and for AdaBoost in particular, since the publication of Freund and Schapire's early papers, e.g. the relationship to additive modeling and the switch to an exponential loss function. I think it's worth exploring what this deeper understanding on the statistical side of the boosting game can offer to the economic and theoretical interpretation. 
+
+\section{References}
+
+[1] Arora, Sanjeev, et al. “The Multiplicative Weights Update Method: A Meta-Algorithm and Applications.” Theory of Computing, vol. 8, 1 May 2012, pp. 121–164., doi:10.4086/toc.2012.v008a006.
+
+[2] Freund, Yoav, and Robert E Schapire. “A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting.” Journal of Computer and System Sciences, vol. 55, no. 1, 1997, pp. 119–139., doi:10.1006/jcss.1997.1504.
+
+[3] Freund, Yoav, and Robert E. Schapire. “Game Theory, on-Line Prediction and Boosting.” Proceedings of the Ninth Annual Conference on Computational Learning Theory - COLT '96, 1996, doi:10.1145/238061.238163.
+
+[4] Gibbons, Robert. Game Theory for Applied Economists. Princeton University Press, 1992.
+
+[5] Hastie, Trevor J., et al. The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Springer, 2009.
+
+[6] Roughgarden, Tim. “Lecture #17: No-Regret Dynamics.” CS364A: Algorithmic Game Theory.
+
+\section{Appendix}
+
+Code for figure 1, Hedge algorithm with regret calculation:
+```{r, eval = FALSE}
+G = matrix(c(.5, 0, 1, 1, .5, 0, 0, 1, .5), nrow = 3, ncol = 3)  # create R-P-S game
+rownames(G) <- c('r', 'p', 's')
+colnames(G) <- c('r', 'p', 's')
+  
+hedgegame <- function(G, nrounds, w, b) {
+    
+  # -- housekeeping -- #
+  i = dim(G)[1]
+  j = dim(G)[2]
+  if(missing(w)) {w = matrix(1/i, ncol = i)} #initialize weight matrix
+  if(missing(nrounds)) {nrounds = 1000} # initialize number of rounds
+  if(missing(b)) {b = .5} # set beta
+  
+  rowms <- matrix(0, nrow = nrounds, ncol = i) # to keep track of updates to the mixed strategies
+  colstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  rowstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  costp <- matrix(0, nrow = nrounds, ncol = 1)
+  coste <- matrix(0, nrow = nrounds, ncol = 1)
+  ## --     -- ##
+  
+  # function to choose col that maximizes utility for col player
+  oracle <-function(p){ 
+    utility = matrix(0, nrow = j, ncol = 1)
+    for(s in 1:j){
+      utility[s] <- p%*%G[,s] # calc utility (expected payoff) for each col strategy in response to p
+    }
+    i = as.matrix(which(utility==max(utility))) # choose stategy with largest utility
+    index = sample(x = i, size = 1) # randomly sample from thos strategies (in case more than 1 has the max utility)
+    rbind(index, as.matrix(G[,index])) # return vector containing col strategy and associated cost col
+  } 
+    
+  ## - - Hedge - - ##
+  for(t in 1:nrounds){
+    p = w/sum(w)          # normalize weights to create probability dist over row strategies
+    colmove = oracle(p)   # call oracle for best response strategy [Ref. 1]
+    lossvec = as.matrix(colmove[-1]) 
+    rowmove = sample(c(1:3), size = 1, prob = p)
+    l = G[rowmove, colmove[1]]     # loss row player incurs from col player's strategy
+    
+      
+    # expert chooses 1 strat
+    expert = sample(x = c(1:3), size = 1) # expms = (1/3, 1/3, 1/3) 
+    le = G[expert, colmove[1]]
+    ##
+    rowms[t,] = p
+    colstrat[t] = colmove[1]
+    rowstrat[t] = rowmove
+    costp[t] = l
+    coste[t] = le
+    w = w * t(b^lossvec) # update weights according to observed environment loss
+  }
+  
+  list("costp" = costp, "coste" = coste, "algcost" = sum(costp), "expcost" = sum(coste), "regret" = sum(costp)-sum(coste), "colstrat" = colstrat, "rowstrat" = rowstrat, "rowms" = rowms, "nrounds" = nrounds, "b" = b)
+} 
+  
+  
+regret = matrix(0, nrow = 70, ncol = 1)
+for(n in 1:70){
+  hedgeresults = hedgegame(G, nrounds = 30*n)
+  regret[n] = (hedgeresults$regret)/(30*n)
+}
+  
+matplot(x = c(1:70), y = regret, typ = 'l', lty = 1, xlab = "rounds of play", ylab = "normalized regret")
+```
+  
+Code for figure 2, uneven game with loss comparison:
+```{r, eval = FALSE}
+G = matrix(c(.5, 0, 1, 1, .5, 0, 0, 1, .5), nrow = 3, ncol = 3)  # create R-P-S game
+rownames(G) <- c('r', 'p', 's')
+colnames(G) <- c('r', 'p', 's')
+
+hedgegame <- function(G, nrounds, w, b) {
+  
+  # -- housekeeping -- #
+  i = dim(G)[1]
+  j = dim(G)[2]
+  if(missing(w)) {w = matrix(1/i, ncol = i)} #initialize weight matrix
+  if(missing(nrounds)) {nrounds = 1000} # initialize number of rounds
+  if(missing(b)) {b = .5} # set beta
+  
+  rowms <- matrix(0, nrow = nrounds, ncol = i) # to keep track of updates to the mixed strategies
+  colstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  rowstrat <- matrix(0, nrow = nrounds, ncol = 1)
+  costp <- matrix(0, nrow = nrounds, ncol = 1)
+  coste <- matrix(0, nrow = nrounds, ncol = 1)
+  ## --     -- ##
+  
+  for(t in 1:nrounds){
+    p = w/sum(w)          # normalize weights to create probability dist over row strategies
+    colmove = sample(x = c(1:3), size = 1, prob = c(1/5,3/5,1/5))   # call oracle for best response strategy Ref. 1]
+    lossvec = G[,colmove] 
+    rowmove = sample(c(1:3), size = 1, prob = p)
+    l = G[rowmove, colmove[1]]     # loss row player incurs from col player's strategy
+    
+    
+    # expert chooses 1 strat
+    expert = sample(x = c(1:3), size = 1) # expms = (1/3, 1/3, 1/3) 
+    le = G[expert, colmove[1]]
+    ##
+    rowms[t,] = p
+    colstrat[t] = colmove[1]
+    rowstrat[t] = rowmove
+    costp[t] = l
+    coste[t] = le
+    w = w * t(b^lossvec) # update weights according to observed environment loss
+  }
+  
+  list("costp" = costp, "coste" = coste, "algcost" = sum(costp), "expcost" = sum(coste), "regret" = sum(costp)-sum(coste), "colstrat" = colstrat, "rowstrat" = rowstrat, "rowms" = rowms, "nrounds" = nrounds, "b"  =b)
+} 
+  
+algvsexp = matrix(0, nrow = 50, ncol = 2)
+for(n in 1:50){
+  hedgeresults = hedgegame(G)
+  algvsexp[n,] = cbind(hedgeresults$algcost, hedgeresults$expcost)
+}
+matplot(x=c(1:50), y=algvsexp, typ = 'l', lty = 1, xlab = "trials", ylab = "expert cost vs alg cost")
+```
+
