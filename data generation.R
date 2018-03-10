@@ -1,5 +1,8 @@
+## Generates a toy data set for binary classification. ##
+## Based on plot (p. 17) in Hastie's 'Elements of Statistical Learning.' ##
+
 library(MASS) #has mvrnorm
-##pkg mvtnorm
+
 # set global means for the two classes, ORANGE and BLUE
 globalORANGE <- c(0, 1)
 globalBLUE <- c(1, 0)
@@ -9,14 +12,13 @@ v <- diag(2)
 localORANGE <- mvrnorm(10, globalORANGE, v)
 localBLUE <- mvrnorm(10, globalBLUE, v)
 
-# generate training data
+# generate training data from local means
 trainORANGE <- matrix(0, nrow = 100, ncol = 2)
 for(k in 1:100) { # 100 means per class
      mkindex <- sample(1:10, size = 1, prob = rep(0.1, 10)) # randomly chosen index for mean k
      mk <- localORANGE[mkindex,] # mean for data point k
      trainORANGE[k,] <- mvrnorm(1, t(mk), diag(2)/5) # generate data pt k
 }
-#trainORANGE <- cbind(0, trainORANGE)
 
 trainBLUE <- matrix(0, nrow = 100, ncol = 2)
 for(k in 1:100) { # 100 means per class
@@ -24,7 +26,6 @@ for(k in 1:100) { # 100 means per class
   mk <- localBLUE[mkindex,] # mean for data point k
   trainBLUE[k,] <- mvrnorm(1, t(mk), diag(2)/5) # generate data pt k
 }
-#trainBLUE <- cbind(1,trainBLUE)
 
 train <- rbind(trainORANGE, trainBLUE)
 
