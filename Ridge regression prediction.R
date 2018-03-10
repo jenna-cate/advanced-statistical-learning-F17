@@ -17,12 +17,16 @@ beta = coef(lm.model)                   # matrix of estimated coefficients (for 
 penalty = rowSums(beta[,-1]^2)   # total penalty P(\beta) (sum of squared betas)
 
 library(glmnet)
-glm.model <- glmnet(x, y, alpha=0, lambda=lam.seq)
-cv.gm <- cv.glmnet(x, y, alpha=0, lambda=lam.seq)
-loocv.gm <- cv.glmnet(x, y, alpha=0, lambda=lam.seq, nfolds = 1460)
-loocv.gm$lambda.min
-cv.gm$lambda.min
-glm.model$lambda.min
+glm.model <- glmnet(x, y, alpha=0, lambda=lam.seq) # alpha = 0 makes the glm function as ridge regression
+cv.gm <- cv.glmnet(x, y, alpha=0, lambda=lam.seq) # cross validated glmnet
+loocv.gm <- cv.glmnet(x, y, alpha=0, lambda=lam.seq, nfolds = 1460) # "leave one out" cross validation
+
+# lambda vals for which cv error is lowest
+cvl <- cv.gm$lambda.min 
+lcvl <- loocv.gm$lambda.min 
+print(cvl) # the best lambda values are printed
+print(lcvl)
+
 #- ridge path vs. lambda 
 plot(glm.model, "lambda", las=1); abline(h=1,lty=1,col="lightgray")
 plot(cv.gm, "lambda", las=1); abline(h=1,lty=1,col="lightgray")
