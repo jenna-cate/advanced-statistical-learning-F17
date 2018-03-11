@@ -1,17 +1,21 @@
+### Compares glm performance for 2 different choices of lambda (coef penalty): ###
+## lambda.min: choose lambda that gives lowest test error ##
+## 1se: to improve generalization, choose lambda that gives error 1 standard error higher than min error ##
+
 library(mlbench)
 library(glmnet)
 
 #-- Settings
-n.train = 200 # number of training obs
-n.test = 50 # number of test obs
+n.train = 700 # number of training obs
+n.test = 300 # number of test obs
 K = 10 # number of CV folds
 alpha = 0.5 # glmnet tuning alpha (1 = lasso, 0 = ridge)
-M = 20 # number of simulations
-lam.seq = exp(seq(log(100),log(1e-5),length=500))
+M = 100 # number of simulations
+lam.seq = exp(seq(log(100),log(1e-5),length=100))
 evaluation <- matrix(0, nrow=M, ncol=2)
 
-  #-- Data Generating Function
-  getData <- function(n) mlbench.friedman1(n, sd=2) # data generating function
+#-- Data Generating Function
+getData <- function(n) mlbench.friedman1(n, sd=2) 
 #-- Simulations
 for(m in 1:M){
   # 1. Generate Training Data
@@ -45,5 +49,7 @@ for(m in 1:M){
 
   #-- Compare
 # compare performance of the approaches
-  sum(evaluation[,1]>evaluation[,2])
+  percent = sum(evaluation[,1]>evaluation[,2])/M*100 ## % lambda.min performs worse than lambda.1se
+  sprintf("The glmnet model using lambda.min outperforms the 1se lambda on %f%% of the simulations.", percent)
+
   
