@@ -1,7 +1,8 @@
 # advanced-statistical-learning-F17
-This repository contains the coding portion of the coursework from Advanced Statistical Learning (ST697) at UA.
+This repository contains most of my coursework from Advanced Statistical Learning (ST697) at UA.
 
-### Files:
+#### Game Theory & Boosting (Final Project):
+Abstract: Weight update algorithms have been both derived and applied across disciplines. The classic game-theoretical problem of finding a Nash Equilibrium in a zero-sum, two-player game can be approximately solved using a multiplicative weight update algorithm. The concept of boosting can be understood as solving a game whose two players are a set of hypotheses (or weak classifiers) and a set of examples. In boosting by sampling, the example set has an adversarial relationship with the hypothesis, in that it is constructed so as to maximally challenge the hypothesis. Solving a game against a player of unknown hostility (maybe adversarial, maybe not) is of interest as well; the “learning” player may want to be able to take advantage of any game value their opponent may be willing to give up. This problem is approached with the tools of on-line prediction.
 
 #### binary classification data generation:
 Generates a toy data set for binary classification based on a plot (p. 17) in Hastie's 'Elements of Statistical Learning.'
