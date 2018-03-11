@@ -1,9 +1,4 @@
-library(readr)
-y <- read_csv("hw3_2_Y.csv", col_names = FALSE)
-hw3_2_beta <- read_csv("hw3_2_beta.csv", col_names = FALSE)
-X <- read_csv("hw3_2_X.csv", col_names = FALSE)
-
-
+### A function for logistic regression, plus a test example. ###
 
 logreg <- function(X,y) {
   #set parameters
@@ -26,12 +21,20 @@ logreg <- function(X,y) {
     B <- solve(t(X)%*%(X*(c(p*(1-p)))))%*%t(X)%*%(z*c(p*(1-p)))  # X*(c(p*(1-p))) is equivalent to W%*%X
     B<-t(B)
     delta <- abs((sum(abs(B))-sum(abs(Bold))))
-    #if(delta < dif) {  ## this step gives me the error: comparison (3) is possible only for atomic and list types
-    #break              even though evaluating "delta < dif" returns TRUE (or FALSE)
-    #}
+    if(delta < dif){
+      break
+    }
   }
-
   return(B)
 }
+
+
+# - -
+## Test Example
+## Data (files here, hw 3 prob 2: https://mdporter.github.io/ST697/homework.html)
+library(readr)
+y <- read_csv("hw3_2_Y.csv", col_names = FALSE)
+hw3_2_beta <- read_csv("hw3_2_beta.csv", col_names = FALSE)
+X <- read_csv("hw3_2_X.csv", col_names = FALSE)
 
 logregBeta = logreg(X, y) ## current ratio to correct ans:            X1
