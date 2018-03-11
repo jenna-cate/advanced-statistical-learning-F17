@@ -1,3 +1,5 @@
+### Estimate log density ratio for Gaussian, kernel density, non-parametric, and Bayesian models. ###
+### (pdf of label = 1/pfd of label = 0) ###
 
 library(ISLR)
 #-----------------------------------------------------------------------------
